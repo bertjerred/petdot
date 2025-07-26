@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pet Dot</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+        }
+        #header {
+            margin-bottom: 20px;
+        }
+        #controls {
+            margin-bottom: 20px;
+        }
+        #feeding-controls {
+            margin-bottom: 20px;
+        }
+        #pet-container {
+            height: 1em;
+            white-space: pre;
+            transition: color 0.3s;
+        }
+        #thought-bubble {
+            margin: 10px 0;
+            font-style: italic;
+            color: #666;
+        }
+        .hidden {
+            display: none;
+        }
+        .happy {
+            color: #2ecc71;
+        }
+        .unhappy {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h2>Pet Dot</h2>
+        <div style="font-family: monospace; margin-bottom: 15px;">Sometimes I get hungry.</div>
+        <div id="controls">
+            <input type="text" id="petName" placeholder="Name your pet" />
+            <button id="saveBtn">Save Pet/Progress</button>
+            <button id="loadBtn">Load Pet</button>
+        </div>
+        <div id="petInfo"></div>
+    </div>
+    <div id="pet-container"></div>
+    <div id="thought-bubble" class="hidden"></div>
+    <div id="feeding-controls" class="hidden">
+        <input type="text" id="foodInput" placeholder="Feed your pet" maxlength="10" />
+        <button id="feedBtn">Feed</button>
+    </div>
+    <script>
+        const container = document.getElementById('pet-container');
+        const thoughtBubble = document.getElementById('thought-bubble');
+        const feedingControls = document.getElementById('feeding-controls');
+        const foodInput = document.getElementById('foodInput');
+        const feedBtn = document.getElementById('feedBtn');
+        const petNameInput = document.getElementById('petName');
+        const petInfo = document.getElementById('petInfo');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadBtn = document.getElementById('loadBtn');
+        
+        const width = 50; // Width of the movement area
+        let position = 0;
+        let direction = 1;
+        let petName = '';
+
+        function updateMoodDisplay() {
+            const moodEmoji = moodPoints > 0 ? '😊' : moodPoints < 0 ? '😢' : '😐';
+            petInfo.textContent = petName ? 
+                `Pet name: ${petName} | Mood: ${moodEmoji}` :
+                `Mood: ${moodEmoji}`;
+        }
+
+        let isJittering = false;
+        let colorTransition = false;
+
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function updateDot() {
+            // Regular movement
+            if (!isJittering) {
+                position += direction;
+                if (position >= width - 1 || position <= 0) {
+                    direction *= -1;
+                }
+            } else {
+                // Jittery movement
+                position = Math.max(0, Math.min(width - 1, position + randomInt(-2, 2)));
+            }
+
+            // Random chance to start jittering
+            if (!isJittering && Math.random() < 0.02) { // 2% chance each update
+                isJittering = true;
+                setTimeout(() => { isJittering = false; }, randomInt(300, 1000));
+            }
+
+            // Random chance to start color transition
+            if (!colorTransition && !container.classList.contains('happy') && 
+                !container.classList.contains('unhappy') && Math.random() < 0.02) {
+                colorTransition = true;
+                const duration = randomInt(1000, 2000);
+                const steps = 20;
+                let step = 0;
+
+                const interval = setInterval(() => {
+                    const progress = step / steps;
+                    const grayLevel = Math.floor(progress < 0.5 ? 
+                        255 * (progress * 2) : // Fade to gray
+                        255 * (2 - progress * 2)); // Fade back to black
+                    container.style.color = `rgb(${grayLevel}, ${grayLevel}, ${grayLevel})`;
+                    
+                    step++;
+                    if (step > steps) {
+                        clearInterval(interval);
+                        container.style.color = ''; // Reset to default
+                        colorTransition = false;
+                    }
+                }, duration / steps);
+            }
+
+            // Random chance for a big jump
+            if (!isJittering && Math.random() < 0.01) { // 1% chance each update
+                position = randomInt(0, width - 1);
+            }
+
+            // Render the dot
+            let line = ' '.repeat(width);
+            line = line.substring(0, position) + '&#9679;' + line.substring(position + 1);
+            container.innerHTML = line;
+        }
+
+        // Update the dot position every 50ms (faster for smoother jitters)
+        setInterval(updateDot, 50);
+
+        // Hunger system
+        function getRandomKey() {
+            const keys = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+            return keys[Math.floor(Math.random() * keys.length)];
+        }
+
+        function showThought(text) {
+            thoughtBubble.textContent = text;
+            thoughtBubble.classList.remove('hidden');
+        }
+
+        function hideThought() {
+            thoughtBubble.classList.add('hidden');
+        }
+
+        let currentDesiredFood = '';
+        let hungerTimeout;
+        let lastFeedTime = Date.now();
+        let feedingHistory = [];
+        let moodPoints = 0;
+
+        // Create a better beep sound using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5 note
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function startHungerSystem() {
+            const now = Date.now();
+            const timeSinceLastFeed = now - lastFeedTime;
+            
+            // Random time between 30 seconds and 2 minutes, adjusted by mood
+            const minTime = Math.max(10000, 30000 - (moodPoints * 1000)); // Minimum 10 seconds
+            const maxTime = Math.max(30000, 120000 - (moodPoints * 2000)); // Minimum 30 seconds
+            const randomTime = Math.floor(Math.random() * (maxTime - minTime) + minTime);
+            
+            hungerTimeout = setTimeout(() => {
+                currentDesiredFood = getRandomKey();
+                showThought(`I am hungry for some ${currentDesiredFood}!`);
+                feedingControls.classList.remove('hidden');
+                playBeep();
+            }, randomTime);
+        }
+
+        startHungerSystem();
+
+        feedBtn.addEventListener('click', () => {
+            const food = foodInput.value.toUpperCase();
+            if (food === currentDesiredFood.repeat(food.length)) {
+                container.classList.add('happy');
+                showThought('Yummy! Thank you!');
+                lastFeedTime = Date.now();
+                moodPoints = Math.min(10, moodPoints + 1);
+                updateMoodDisplay();
+                
+                // Record successful feeding
+                feedingHistory.push({
+                    timestamp: lastFeedTime,
+                    food: food,
+                    desired: currentDesiredFood,
+                    success: true,
+                    timeSinceLastFeed: lastFeedTime - lastFeedTime
+                });
+                
+                setTimeout(() => {
+                    container.classList.remove('happy');
+                    hideThought();
+                    feedingControls.classList.add('hidden');
+                    foodInput.value = '';
+                    clearTimeout(hungerTimeout);
+                    startHungerSystem();
+                }, 1000);
+            } else {
+                container.classList.add('unhappy');
+                showThought('Bleh! Not what I wanted!');
+                moodPoints = Math.max(-10, moodPoints - 1);
+                updateMoodDisplay();
+                
+                // Record failed feeding
+                feedingHistory.push({
+                    timestamp: Date.now(),
+                    food: food,
+                    desired: currentDesiredFood,
+                    success: false
+                });
+                
+                setTimeout(() => {
+                    container.classList.remove('unhappy');
+                    hideThought();
+                }, 1000);
+            }
+        });
+
+        // Save pet data
+        saveBtn.addEventListener('click', async () => {
+            petName = petNameInput.value;
+            if (!petName) {
+                alert('Please name your pet first!');
+                return;
+            }
+            
+            const petData = {
+                name: petName,
+                position: position,
+                direction: direction,
+                lastFeedTime: lastFeedTime,
+                moodPoints: moodPoints,
+                feedingHistory: feedingHistory,
+                savedAt: Date.now()
+            };
+            
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: `${petName}.pet`,
+                    types: [{
+                        description: 'Pet Dot File',
+                        accept: {'text/plain': ['.pet']}
+                    }],
+                });
+                
+                const writable = await handle.createWritable();
+                await writable.write(JSON.stringify(petData));
+                await writable.close();
+                
+                petInfo.textContent = `Pet name: ${petName}`;
+            } catch (err) {
+                console.error('Failed to save:', err);
+            }
+        });
+
+        // Load pet data
+        loadBtn.addEventListener('click', async () => {
+            try {
+                const [fileHandle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'Pet Dot File',
+                        accept: {'text/plain': ['.pet']}
+                    }],
+                });
+                
+                const file = await fileHandle.getFile();
+                const contents = await file.text();
+                const petData = JSON.parse(contents);
+                
+                petName = petData.name;
+                position = petData.position;
+                direction = petData.direction;
+                lastFeedTime = petData.lastFeedTime || Date.now();
+                moodPoints = petData.moodPoints || 0;
+                feedingHistory = petData.feedingHistory || [];
+                
+                // Calculate time passed since last save
+                const timePassed = Date.now() - (petData.savedAt || Date.now());
+                const hoursPassedSinceLastSave = timePassed / (1000 * 60 * 60);
+                
+                // Adjust mood based on time passed (lose 1 point per hour of neglect)
+                moodPoints = Math.max(-10, moodPoints - Math.floor(hoursPassedSinceLastSave));
+                
+                petNameInput.value = petName;
+                updateMoodDisplay();
+            } catch (err) {
+                console.error('Failed to load:', err);
+            }
+        });
+    </script>
+</body>
+</html>
