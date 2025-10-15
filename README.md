@@ -15,3 +15,13 @@ If you name and save a pet, a `.pet` file is created.
 It's really just a `text file` that you can open with a simple text editor.
 Inside, you'll see that various things are logged, like time and mood.
 To load a pet you interacted with before, just load the .pet file and pick up where you left off.
+
+## Alternate Version
+Looks like this - fewer features, but looks kind of cooler.
+
+This version was an afterthought, and wanted to include it for fun.
+Black dot goes around, occasionally eating colored dots.
+Dots have slightly different behaviors/attractors.
+The end.
+
+![](https://github.com/bertjerred/media/blob/main/petdot-alt-screenshot.png?raw=true)
