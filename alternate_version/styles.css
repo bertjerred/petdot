@@ -1,0 +1,90 @@
+/* styles.css */
+header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+    background: #fafafa;
+}
+
+footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    text-align: center;
+    font-size: 0.8em;
+    color: #555;
+    background: rgba(255,255,255,0.7);
+    z-index: 10005;
+    padding: 4px 0;
+    pointer-events: none;
+}
+footer p {
+    margin: 0;
+}
+
+body {
+    font-size: 12pt;
+}
+body {
+    font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', monospace;
+    margin: 0;
+    padding: 0;
+    background: #fafafa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+header, footer {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+main {
+    flex: 1 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#pet {
+    width: 100vw;
+    height: 60vh;
+    position: relative;
+    background: #e0e0e0;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#pet-visual {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0; /* Hide emoji */
+}
+
+#pet-dot {
+    position: absolute;
+    width: 32px;
+    height: 32px;
+    background: #111;
+    border-radius: 50%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Hide stats section */
+#stats {
+    display: none;
+}
